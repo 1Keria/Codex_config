@@ -1,0 +1,19 @@
+# 复制片段到 user-servers.toml，并在 .env 中配置对应密钥
+
+[mcp_servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "${HOME}/projects"]
+
+[mcp_servers.github]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+
+[mcp_servers.github.env]
+GITHUB_PERSONAL_ACCESS_TOKEN = "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+
+[mcp_servers.brave-search]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-brave-search"]
+
+[mcp_servers.brave-search.env]
+BRAVE_API_KEY = "${BRAVE_API_KEY}"

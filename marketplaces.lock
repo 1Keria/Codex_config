@@ -1,0 +1,12 @@
+# Codex Marketplace 清单
+# 每行一个来源，bootstrap.sh 会自动添加
+# 以 # 开头的行为注释，空行忽略
+#
+# 格式示例：
+#   owner/repo
+#   owner/repo --ref main
+#   https://github.com/owner/repo.git --sparse .agents/plugins
+#   ./local-marketplace-root
+#
+# 官方 curated 商店 openai-curated 通常已内置，无需添加
+# 也可用：~/codex-setup/scripts/add-marketplace.sh owner/repo

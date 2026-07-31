@@ -1,0 +1,4 @@
+# 独立 MCP 服务器（无密钥明文；可用 ${VAR}，bootstrap 会 envsubst）
+# 示例见 user-servers.example.toml
+#
+# 格式：每个服务器一个 [mcp_servers.<name>] 表
