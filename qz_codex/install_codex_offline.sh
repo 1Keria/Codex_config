@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# 断网区执行：离线包安装到 apps/codex（offline_repo 仅存包）
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+OFFLINE_DIR="${1:-$ROOT_DIR/offline_repo/codex}"
+NPM_DIR="$OFFLINE_DIR/npm"
+APP_DIR="$ROOT_DIR/apps/codex"
+APP_BIN_DIR="$APP_DIR/bin"
+APP_LOCAL_DIR="$APP_DIR/offline/codex"
+SHARED_NODE_DIR="$ROOT_DIR/apps/node/bin"
+APP_WRAPPER="$APP_BIN_DIR/codex"
+
+mkdir -p "$APP_BIN_DIR" "$SHARED_NODE_DIR"
+
+if [[ ! -f "$APP_LOCAL_DIR/package/bin/codex.js" ]]; then
+  CODEX_TGZ="$(ls "$NPM_DIR"/openai-codex*.tgz 2>/dev/null | grep -v 'linux-x64' | head -n 1 || true)"
+  if [[ -z "$CODEX_TGZ" ]]; then
+    CODEX_TGZ="$(ls "$NPM_DIR"/openai-codex*.tgz 2>/dev/null | head -n 1 || true)"
+  fi
+  if [[ -z "$CODEX_TGZ" ]]; then
+    echo "未找到离线包：$NPM_DIR/openai-codex*.tgz"
+    echo "请先执行：bash script/codex/prepare_codex_offline.sh"
+    exit 1
+  fi
+
+  echo ">>> 解包安装 Codex 到 apps/codex"
+  rm -rf "$APP_LOCAL_DIR"
+  mkdir -p "$APP_LOCAL_DIR"
+  tar -xzf "$CODEX_TGZ" -C "$APP_LOCAL_DIR"
+  if [[ ! -f "$APP_LOCAL_DIR/package/bin/codex.js" ]]; then
+    echo "离线包结构异常：未找到 package/bin/codex.js"
+    exit 1
+  fi
+else
+  echo ">>> 已存在 Codex 离线包目录，跳过解包"
+fi
+
+# 可选依赖：原生 codex 二进制（npm pack @openai/codex-linux-x64 会得到此包）
+LINUX_TGZ="$(ls "$NPM_DIR"/openai-codex-linux-x64*.tgz 2>/dev/null | head -n 1 || true)"
+if [[ -n "$LINUX_TGZ" ]]; then
+  echo ">>> 安装 Codex Linux 原生包"
+  mkdir -p "$APP_DIR/node_modules/@openai"
+  TMPD="$APP_DIR/node_modules/@openai/.codex-linux-extract"
+  rm -rf "$TMPD" "$APP_DIR/node_modules/@openai/codex-linux-x64"
+  mkdir -p "$TMPD"
+  tar -xzf "$LINUX_TGZ" -C "$TMPD"
+  if [[ ! -d "$TMPD/package" ]]; then
+    echo "警告：$LINUX_TGZ 内未找到 package/，跳过原生包"
+    rm -rf "$TMPD"
+  else
+    mv "$TMPD/package" "$APP_DIR/node_modules/@openai/codex-linux-x64"
+    rm -rf "$TMPD"
+  fi
+elif [[ ! -x "$APP_DIR/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex/codex" ]] 2>/dev/null; then
+  echo ">>> 警告：未找到 openai-codex-linux-x64*.tgz，且 node_modules 中无可用原生 codex。"
+  echo "    请在可联网环境执行：bash script/codex/prepare_codex_offline.sh（需 npm，会下载平台包）"
+fi
+
+cat > "$APP_WRAPPER" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_PATH="\$(readlink -f "\${BASH_SOURCE[0]}")"
+APP_DIR="\$(cd "\$(dirname "\$SCRIPT_PATH")/.." && pwd)"
+CLI_JS="\$APP_DIR/offline/codex/package/bin/codex.js"
+RUNTIME_NODE="\$APP_DIR/../node/bin/node"
+if [[ ! -f "\$CLI_JS" ]]; then
+  echo "未找到 \$CLI_JS"
+  exit 1
+fi
+if [[ -x "\$RUNTIME_NODE" ]]; then
+  exec "\$RUNTIME_NODE" "\$CLI_JS" "\$@"
+elif command -v node >/dev/null 2>&1; then
+  exec node "\$CLI_JS" "\$@"
+elif command -v nodejs >/dev/null 2>&1; then
+  exec nodejs "\$CLI_JS" "\$@"
+elif compgen -G "/root/.cursor-server/bin/linux-x64/*/node" >/dev/null 2>&1; then
+  NODE_BIN="\$(ls /root/.cursor-server/bin/linux-x64/*/node | head -n 1)"
+  exec "\$NODE_BIN" "\$CLI_JS" "\$@"
+else
+  echo "未检测到 node，请先安装 node（或确保 PATH 包含 node）"
+  exit 1
+fi
+EOF
+chmod +x "$APP_WRAPPER"
+
+ln -sfn "$APP_WRAPPER" /usr/local/bin/codex 2>/dev/null || true
+ln -sfn "$APP_WRAPPER" /usr/bin/codex 2>/dev/null || true
+
+NODE_BIN=""
+if command -v node >/dev/null 2>&1; then
+  NODE_BIN="$(command -v node)"
+elif command -v nodejs >/dev/null 2>&1; then
+  NODE_BIN="$(command -v nodejs)"
+elif compgen -G "/root/.cursor-server/bin/linux-x64/*/node" >/dev/null 2>&1; then
+  NODE_BIN="$(ls /root/.cursor-server/bin/linux-x64/*/node | head -n 1)"
+fi
+
+if [[ -n "$NODE_BIN" ]]; then
+  cp -f "$NODE_BIN" "$SHARED_NODE_DIR/node"
+  chmod +x "$SHARED_NODE_DIR/node" 2>/dev/null || true
+  ln -sfn "$SHARED_NODE_DIR/node" /usr/local/bin/node 2>/dev/null || true
+  ln -sfn "$SHARED_NODE_DIR/node" /usr/local/bin/nodejs 2>/dev/null || true
+fi
+
+# 原生 codex / ripgrep 在部分共享盘上会失去 +x
+for _plat in codex-linux-x64 codex-linux-arm64; do
+  _vdir="$APP_DIR/node_modules/@openai/$_plat/vendor"
+  if [[ -d "$_vdir" ]]; then
+    find "$_vdir" -type f \( -name codex -o -name rg \) -exec chmod +x {} + 2>/dev/null || true
+  fi
+done
+
+chmod +x "$APP_WRAPPER" 2>/dev/null || true
+[[ -f "$SHARED_NODE_DIR/node" ]] && chmod +x "$SHARED_NODE_DIR/node" 2>/dev/null || true
+
+hash -r 2>/dev/null || true
+echo ">>> 已安装：$APP_WRAPPER"
