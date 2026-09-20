@@ -14,3 +14,6 @@ Thumbs.db
 # Local Codex secrets and notebook checkpoints
 qz_codex/codex.api.env
 qz_codex/.ipynb_checkpoints/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/

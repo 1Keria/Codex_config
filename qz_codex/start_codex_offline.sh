@@ -19,11 +19,8 @@ _cc_fail() {
 }
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+# 配置文件只通过 CODEX_ENV_FILE 指定，避免把 Codex 提示词误当成路径。
 ENV_FILE="${CODEX_ENV_FILE:-$ROOT_DIR/script/codex/qz_codex/codex.api.env}"
-# 只有显式传入非选项参数时才把它当配置文件；避免 source 时误读 Codex 的 -p/--help。
-if [[ -n "${1:-}" && "${1:-}" != -* ]]; then
-  ENV_FILE="$1"
-fi
 APP_WRAPPER="$ROOT_DIR/apps/codex/bin/codex"
 
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -46,12 +43,12 @@ if [[ -n "${API_KEY:-}" ]]; then
   API_KEY="${API_KEY%"${API_KEY##*[![:space:]]}"}"
 fi
 
-[[ -n "${BASE_URL:-}" ]] && export OPENAI_BASE_URL="$BASE_URL"
+export CODEX_HOME="$ROOT_DIR/apps/codex/home"
 [[ -n "${API_KEY:-}" ]] && export OPENAI_API_KEY="$API_KEY"
 [[ -n "${MODEL:-}" ]] && export OPENAI_MODEL="$MODEL"
 
-if [[ -z "${OPENAI_BASE_URL:-}" ]]; then
-  echo "BASE_URL 未配置（会映射到 OPENAI_BASE_URL）"
+if [[ -z "${BASE_URL:-}" ]]; then
+  echo "BASE_URL 未配置"
   _cc_fail
 fi
 

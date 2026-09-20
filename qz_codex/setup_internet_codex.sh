@@ -18,10 +18,19 @@ if [[ -z "${CODEX_PROXY_HOST:-}" ]]; then
 fi
 [[ -n "$CODEX_PROXY_HOST" ]] || { echo "无法自动获取代理主机地址" >&2; exit 1; }
 mkdir -p "$(dirname "$PROXY_ENV")"
-printf 'CODEX_PROXY_BASE_URL=http://%s:%s\n' "$CODEX_PROXY_HOST" "$PORT" > "$PROXY_ENV"
+if [[ -n "${CODEX_PROXY_BASE_URL:-}" ]]; then
+  printf 'CODEX_PROXY_BASE_URL=%s\n' "${CODEX_PROXY_BASE_URL%/}" > "$PROXY_ENV"
+elif [[ ! -f "$PROXY_ENV" ]]; then
+  printf 'CODEX_PROXY_BASE_URL=http://%s:%s\n' "$CODEX_PROXY_HOST" "$PORT" > "$PROXY_ENV"
+fi
 chmod 600 "$PROXY_ENV" 2>/dev/null || true
-if ! python3 -c 'import flask, requests, urllib3' >/dev/null 2>&1; then
-  python3 -m pip install --user flask requests urllib3 >/dev/null
+PYTHON_PACKAGES="$ROOT_DIR/apps/claude/python-packages"
+if ! PYTHONPATH="$PYTHON_PACKAGES${PYTHONPATH:+:$PYTHONPATH}" python3 -c 'import flask, requests, urllib3' >/dev/null 2>&1; then
+  mkdir -p "$PYTHON_PACKAGES"
+  python3 -m pip install --no-index \
+    --find-links "$ROOT_DIR/offline_repo/claude/pip" \
+    --target "$PYTHON_PACKAGES" \
+    -r "$ROOT_DIR/apps/claude/requirements-proxy.txt" >/dev/null
 fi
 check() { python3 - "$PORT" "$TARGET" <<'PY' >/dev/null 2>&1
 import json, sys, urllib.request
