@@ -1,6 +1,7 @@
 {
-  "deployment": "qz-yundou",
-  "note": "API endpoint, key and default model are managed by qz_codex/codex.api.env; bootstrap.sh does not overwrite the yundou provider.",
+  "deployment": "dual-mode-yundou",
+  "modes": ["qz", "direct"],
+  "note": "API/provider config is managed separately by qz_codex and direct_codex; bootstrap sync only merges AGENTS, MCP, skills and plugins.",
   "permissions": {
     "allow": [],
     "deny": []

@@ -10,6 +10,8 @@ APP_BIN_DIR="$APP_DIR/bin"
 APP_LOCAL_DIR="$APP_DIR/offline/codex"
 SHARED_NODE_DIR="$ROOT_DIR/apps/node/bin"
 APP_WRAPPER="$APP_BIN_DIR/codex"
+SELECTED_ENV_FILE="${CODEX_ENV_FILE:-$ROOT_DIR/script/codex/qz_codex/codex.api.env}"
+DEPLOYMENT_MODE="${CODEX_DEPLOYMENT_MODE:-qz}"
 
 mkdir -p "$APP_BIN_DIR" "$SHARED_NODE_DIR"
 
@@ -101,10 +103,10 @@ ROOT_DIR="\$(cd "\$APP_DIR/../.." && pwd)"
 CLI_JS="\$APP_DIR/offline/codex/package/bin/codex.js"
 RUNTIME_NODE="\$APP_DIR/../node/bin/node"
 PERSONAL_ENV_FILE="\$ROOT_DIR/script/codex/.env"
-ENV_FILE="\$ROOT_DIR/script/codex/qz_codex/codex.api.env"
+ENV_FILE="$SELECTED_ENV_FILE"
 export CODEX_HOME="\$APP_DIR/home"
 mkdir -p "\$CODEX_HOME"
-# 个人 MCP/Plugin 环境变量先加载；qz API 配置后加载并拥有最高优先级。
+# 个人 MCP/Plugin 环境变量先加载；当前部署模式的 API 配置后加载并拥有最高优先级。
 for _env_file in "\$PERSONAL_ENV_FILE" "\$ENV_FILE"; do
   if [[ -f "\$_env_file" ]]; then
     set -a
@@ -160,20 +162,22 @@ done
 # 将旧个人目录中的配置、状态和会话迁入共享项目目录（只执行一次）。
 CODEX_HOME_DIR="$APP_DIR/home"
 LEGACY_CODEX_HOME="${HOME}/.codex"
+SELECTED_ENV_FILE="${CODEX_ENV_FILE:-$ROOT_DIR/script/codex/qz_codex/codex.api.env}"
 MIGRATION_MARKER="$CODEX_HOME_DIR/.qz_persistent_home"
 mkdir -p "$CODEX_HOME_DIR"
 if [[ ! -f "$MIGRATION_MARKER" && -d "$LEGACY_CODEX_HOME" && ! -L "$LEGACY_CODEX_HOME" ]]; then
   cp -a "$LEGACY_CODEX_HOME/." "$CODEX_HOME_DIR/"
 fi
 touch "$MIGRATION_MARKER"
+printf '%s\n' "$DEPLOYMENT_MODE" > "$CODEX_HOME_DIR/.deployment-mode"
 chmod 700 "$CODEX_HOME_DIR" 2>/dev/null || true
 # 兼容不经过项目包装器启动的工具；该软链接丢失时可由安装脚本重建。
-if [[ ! -e "$LEGACY_CODEX_HOME" ]]; then
-  ln -s "$CODEX_HOME_DIR" "$LEGACY_CODEX_HOME" 2>/dev/null || true
+if [[ -L "$LEGACY_CODEX_HOME" || ! -e "$LEGACY_CODEX_HOME" ]]; then
+  ln -sfn "$CODEX_HOME_DIR" "$LEGACY_CODEX_HOME" 2>/dev/null || true
 fi
 
 # 生成云豆自定义 Provider 配置：保留完整 Harness，强制 HTTP/SSE，禁用 WebSocket。
-CODEX_ENV_FILE="$ROOT_DIR/script/codex/qz_codex/codex.api.env"
+CODEX_ENV_FILE="$SELECTED_ENV_FILE"
 if [[ -f "$CODEX_ENV_FILE" ]]; then
   set -a
   # shellcheck disable=SC1090
@@ -198,9 +202,10 @@ EOF
 fi
 
 # 持久入口位于共享项目；系统入口只是可随时重建的软链接。
-mkdir -p "$ROOT_DIR/.bin"
+mkdir -p "$ROOT_DIR/.bin" "$ROOT_DIR/script/codex/.bin"
 ln -sfn "$APP_WRAPPER" "$ROOT_DIR/.bin/codex"
-GLOBAL_WRAPPER="$ROOT_DIR/.bin/codex"
+ln -sfn "$APP_WRAPPER" "$ROOT_DIR/script/codex/.bin/codex"
+GLOBAL_WRAPPER="$ROOT_DIR/script/codex/.bin/codex"
 if ln -sfn "$APP_WRAPPER" /usr/local/bin/codex 2>/dev/null; then
   GLOBAL_WRAPPER="/usr/local/bin/codex"
 fi

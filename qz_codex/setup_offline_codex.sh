@@ -53,9 +53,11 @@ except Exception as exc:
 PY
 
 # 环境文件更新和连通性验证后再安装，确保 config.toml 使用当前有效映射地址。
-bash "$CODEX_DIR/install_codex_offline.sh" >/dev/null
+CODEX_DEPLOYMENT_MODE=qz CODEX_ENV_FILE="$ENV_FILE" bash "$CODEX_DIR/install_codex_offline.sh" >/dev/null
+printf 'qz\n' > "$ROOT_DIR/script/codex/.active-mode"
 
 # 合并仓库根目录的 AGENTS、MCP、skills、plugins；不会覆盖 yundou Provider。
-if [[ -x "$CODEX_DIR/sync_personal_config.sh" ]]; then
-  bash "$CODEX_DIR/sync_personal_config.sh"
+COMMON_SYNC="$ROOT_DIR/script/codex/scripts/sync-personal-config.sh"
+if [[ -x "$COMMON_SYNC" ]]; then
+  CODEX_HOME="$ROOT_DIR/apps/codex/home" CODEX_BIN="$ROOT_DIR/.bin/codex"     bash "$COMMON_SYNC"
 fi

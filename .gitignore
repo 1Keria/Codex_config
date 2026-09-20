@@ -17,3 +17,7 @@ qz_codex/.ipynb_checkpoints/
 
 # Jupyter checkpoints
 .ipynb_checkpoints/
+.active-mode
+.runtime/
+direct_codex/codex.direct.env
+.bin/

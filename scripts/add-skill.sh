@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 将第三方 skill 添加到 codex-setup 并链接到 ~/.agents/skills/
+# 将第三方 Skill 添加到公共 Git 目录，并同步到所有已安装模式。
 #
 # 用法:
 #   add-skill.sh <skill-name> <source-path>
@@ -12,9 +12,6 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SKILLS_DIR="${REPO}/skills"
-ROOT_DIR="$(cd "$REPO/../.." && pwd)"
-CODEX_SKILLS="$ROOT_DIR/apps/codex/home/skills"
-AGENTS_SKILLS="${HOME}/.agents/skills"
 
 usage() {
   echo "用法: $0 <skill-name> <source-path>"
@@ -35,7 +32,7 @@ if [[ -e "$DEST" ]]; then
   exit 1
 fi
 
-mkdir -p "$SKILLS_DIR" "$CODEX_SKILLS" "$AGENTS_SKILLS"
+mkdir -p "$SKILLS_DIR"
 
 if [[ -f "$SOURCE" ]]; then
   mkdir -p "$DEST"
@@ -53,13 +50,13 @@ if [[ ! -f "${DEST}/SKILL.md" ]]; then
   exit 1
 fi
 
-ln -sfn "$DEST" "${CODEX_SKILLS}/${NAME}"
-ln -sfn "$DEST" "${AGENTS_SKILLS}/${NAME}"
+if [[ -x "$REPO/bootstrap.sh" ]]; then
+  bash "$REPO/bootstrap.sh" sync
+fi
 
 echo "已添加 skill: ${NAME}"
 echo "  仓库路径: ${DEST}"
-echo "  持久链接: ${CODEX_SKILLS}/${NAME}"
-echo "  兼容链接: ${AGENTS_SKILLS}/${NAME}"
+echo "  已同步到所有已安装的 qz/direct 模式"
 echo ""
 echo "下一步:"
 echo "  cd ${REPO} && git add skills/${NAME} && git commit -m \"add skill: ${NAME}\""

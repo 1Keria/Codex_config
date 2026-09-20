@@ -52,7 +52,7 @@ supports_websockets = false
 |---|---|---|
 | `setup_internet_codex.sh` | 可上网区 | 准备/复用离线包和代理依赖，启动或复用 `16067` 代理 |
 | `setup_offline_codex.sh` | 不可上网区 | 验证 qz 映射，安装 Codex，生成持久配置和命令入口 |
-| `sync_personal_config.sh` | 任意区域 | 合并根目录 AGENTS、MCP、skills、plugins，不覆盖 Provider |
+| `../scripts/sync-personal-config.sh` | 任意区域 | 公共同步实现，由根 bootstrap 调用 |
 | `check_codex.sh` | 任意区域 | 检查版本、持久目录并执行最小模型请求 |
 | `run_codex.sh` | 任意区域 | 兼容性启动器；缺少安装时自动安装，否则直接启动 Codex |
 | `prepare_codex_offline.sh` | 可上网区 | 准备固定版本 `0.155.1` 的两个离线 tgz |
@@ -444,9 +444,10 @@ API Key 不应写入命令行参数、日志或公开文档。如果 Key 曾在�
 
 ```bash
 bash script/codex/bootstrap.sh internet   # 可上网区
-bash script/codex/bootstrap.sh install    # 不可上网区安装/完整恢复
-bash script/codex/bootstrap.sh sync       # 只同步个人配置
-bash script/codex/bootstrap.sh check      # 自检
+bash script/codex/bootstrap.sh qz         # qz 不可上网区安装/完整恢复
+bash script/codex/bootstrap.sh direct     # 非 qz 环境直连云豆
+bash script/codex/bootstrap.sh sync       # 两种模式共用的个人配置同步
+bash script/codex/bootstrap.sh check      # 自检并显示当前模式
 ```
 
 根目录配置职责：
@@ -459,9 +460,38 @@ plugins.lock              Plugins
 marketplaces.lock         Marketplaces
 ```
 
-`sync_personal_config.sh` 只更新 AGENTS、skills 和 `config.toml` 中带标记的 MCP 区块，不会覆盖：
+根 `bootstrap.sh sync` 只更新 AGENTS、skills 和 `config.toml` 中带标记的 MCP 区块，不会覆盖：
 
 ```toml
 model_provider = "yundou"
 supports_websockets = false
+```
+
+
+## 12. 非 qz 直连模式
+
+非 qz 环境不需要 `16067` 代理或端口映射，直接执行：
+
+```bash
+cd /inspire/hdd/project/inference-chip/czxs25240022
+bash script/codex/bootstrap.sh direct
+bash script/codex/bootstrap.sh check
+```
+
+直连配置保存在：
+
+```text
+direct_codex/codex.direct.env
+```
+
+该文件和 qz 的 `codex.api.env` 相互独立，且都被 Git 忽略。切回 qz：
+
+```bash
+bash script/codex/bootstrap.sh qz
+```
+
+direct 使用独立 Home `script/codex/.runtime/direct/home`，不会覆盖 qz 的 `apps/codex/home`。两种模式共用 AGENTS、MCP、skills、plugins：
+
+```bash
+bash script/codex/bootstrap.sh sync
 ```

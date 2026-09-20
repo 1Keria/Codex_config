@@ -2,10 +2,10 @@
 # 将仓库根目录的 AGENTS/MCP/skills/plugins 合并到 qz 持久 Codex Home。
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
-REPO="$ROOT_DIR/script/codex"
-CODEX_HOME_DIR="${CODEX_HOME:-$ROOT_DIR/apps/codex/home}"
-CODEX_BIN="$ROOT_DIR/.bin/codex"
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+PROJECT_ROOT="$(cd "$REPO/../.." && pwd)"
+CODEX_HOME_DIR="${CODEX_HOME:?请通过 CODEX_HOME 指定要同步的运行时 Home}"
+CODEX_BIN="${CODEX_BIN:?请通过 CODEX_BIN 指定对应的 Codex 入口}"
 LEGACY_SKILLS_DIR="${HOME}/.agents/skills"
 
 log() { echo "[codex-sync] $*"; }
