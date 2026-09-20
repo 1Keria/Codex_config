@@ -2,7 +2,7 @@
 # 断网区执行：离线包安装到 apps/codex（offline_repo 仅存包）
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 OFFLINE_DIR="${1:-$ROOT_DIR/offline_repo/codex}"
 NPM_DIR="$OFFLINE_DIR/npm"
 APP_DIR="$ROOT_DIR/apps/codex"
@@ -13,11 +13,12 @@ APP_WRAPPER="$APP_BIN_DIR/codex"
 
 mkdir -p "$APP_BIN_DIR" "$SHARED_NODE_DIR"
 
-if [[ ! -f "$APP_LOCAL_DIR/package/bin/codex.js" ]]; then
+# 始终选用版本化安装包；存在新版时覆盖旧安装，避免升级后仍使用旧 CLI。
+CODEX_TGZ="$(find "$NPM_DIR" -maxdepth 1 -type f -name 'openai-codex-[0-9]*.tgz' ! -name '*linux-x64*' | sort -V | tail -n 1 || true)"
+if [[ -z "$CODEX_TGZ" ]]; then
   CODEX_TGZ="$(ls "$NPM_DIR"/openai-codex*.tgz 2>/dev/null | grep -v 'linux-x64' | head -n 1 || true)"
-  if [[ -z "$CODEX_TGZ" ]]; then
-    CODEX_TGZ="$(ls "$NPM_DIR"/openai-codex*.tgz 2>/dev/null | head -n 1 || true)"
-  fi
+fi
+if [[ -n "$CODEX_TGZ" ]]; then
   if [[ -z "$CODEX_TGZ" ]]; then
     echo "未找到离线包：$NPM_DIR/openai-codex*.tgz"
     echo "请先执行：bash script/codex/prepare_codex_offline.sh"
@@ -33,8 +34,20 @@ if [[ ! -f "$APP_LOCAL_DIR/package/bin/codex.js" ]]; then
     exit 1
   fi
 else
-  echo ">>> 已存在 Codex 离线包目录，跳过解包"
+  echo ">>> 未找到 Codex 主包"
+  exit 1
 fi
+
+# 新版原生包的目录是 vendor/<triple>/bin/codex；旧版是 vendor/<triple>/codex/codex。
+# 创建兼容链接，让不同版本的 JS 启动器都能找到原生二进制。
+for _vdir in "$APP_DIR/node_modules/@openai/codex-linux-x64/vendor" "$APP_DIR/node_modules/@openai/codex-linux-arm64/vendor"; do
+  for _triple in x86_64-unknown-linux-musl aarch64-unknown-linux-musl; do
+    if [[ -x "$_vdir/$_triple/bin/codex" && ! -e "$_vdir/$_triple/codex/codex" ]]; then
+      mkdir -p "$_vdir/$_triple/codex"
+      ln -s ../bin/codex "$_vdir/$_triple/codex/codex"
+    fi
+  done
+done
 
 # 可选依赖：原生 codex 二进制（npm pack @openai/codex-linux-x64 会得到此包）
 LINUX_TGZ="$(ls "$NPM_DIR"/openai-codex-linux-x64*.tgz 2>/dev/null | head -n 1 || true)"
@@ -52,10 +65,21 @@ if [[ -n "$LINUX_TGZ" ]]; then
     mv "$TMPD/package" "$APP_DIR/node_modules/@openai/codex-linux-x64"
     rm -rf "$TMPD"
   fi
-elif [[ ! -x "$APP_DIR/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex/codex" ]] 2>/dev/null; then
+elif [[ ! -x "$APP_DIR/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex/codex" && ! -x "$APP_DIR/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex" ]] 2>/dev/null; then
   echo ">>> 警告：未找到 openai-codex-linux-x64*.tgz，且 node_modules 中无可用原生 codex。"
   echo "    请在可联网环境执行：bash script/codex/prepare_codex_offline.sh（需 npm，会下载平台包）"
 fi
+
+
+# 原生包解压后再创建旧版 JS 启动器需要的兼容链接。
+for _vdir in "$APP_DIR/node_modules/@openai/codex-linux-x64/vendor" "$APP_DIR/node_modules/@openai/codex-linux-arm64/vendor"; do
+  for _triple in x86_64-unknown-linux-musl aarch64-unknown-linux-musl; do
+    if [[ -x "$_vdir/$_triple/bin/codex" && ! -e "$_vdir/$_triple/codex/codex" ]]; then
+      mkdir -p "$_vdir/$_triple/codex"
+      ln -s ../bin/codex "$_vdir/$_triple/codex/codex"
+    fi
+  done
+done
 
 cat > "$APP_WRAPPER" <<EOF
 #!/usr/bin/env bash

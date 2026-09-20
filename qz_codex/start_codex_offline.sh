@@ -18,8 +18,12 @@ _cc_fail() {
   exit 1
 }
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-ENV_FILE="${1:-$ROOT_DIR/script/codex/codex.api.env}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+ENV_FILE="${CODEX_ENV_FILE:-$ROOT_DIR/script/codex/qz_codex/codex.api.env}"
+# 只有显式传入非选项参数时才把它当配置文件；避免 source 时误读 Codex 的 -p/--help。
+if [[ -n "${1:-}" && "${1:-}" != -* ]]; then
+  ENV_FILE="$1"
+fi
 APP_WRAPPER="$ROOT_DIR/apps/codex/bin/codex"
 
 if [[ ! -f "$ENV_FILE" ]]; then
