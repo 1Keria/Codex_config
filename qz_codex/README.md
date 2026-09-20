@@ -52,6 +52,7 @@ supports_websockets = false
 |---|---|---|
 | `setup_internet_codex.sh` | 可上网区 | 准备/复用离线包和代理依赖，启动或复用 `16067` 代理 |
 | `setup_offline_codex.sh` | 不可上网区 | 验证 qz 映射，安装 Codex，生成持久配置和命令入口 |
+| `sync_personal_config.sh` | 任意区域 | 合并根目录 AGENTS、MCP、skills、plugins，不覆盖 Provider |
 | `check_codex.sh` | 任意区域 | 检查版本、持久目录并执行最小模型请求 |
 | `run_codex.sh` | 任意区域 | 兼容性启动器；缺少安装时自动安装，否则直接启动 Codex |
 | `prepare_codex_offline.sh` | 可上网区 | 准备固定版本 `0.155.1` 的两个离线 tgz |
@@ -138,7 +139,8 @@ bash script/codex/qz_codex/setup_offline_codex.sh
 5. 从共享离线包安装 Codex `0.155.1`；
 6. 生成 `apps/codex/home/config.toml`；
 7. 配置 `yundou` Provider、HTTP/SSE 和 `supports_websockets=false`；
-8. 创建项目入口和系统命令软链接。
+8. 创建项目入口和系统命令软链接；
+9. 同步根目录的 AGENTS、MCP、skills、plugins。
 
 ### 3.4 完整自检
 
@@ -434,3 +436,32 @@ log/
 ```
 
 API Key 不应写入命令行参数、日志或公开文档。如果 Key 曾在聊天、日志或版本库中明文出现，应立即在服务平台撤销并重新生成。
+
+
+## 11. 与根配置仓库的整合
+
+推荐统一使用：
+
+```bash
+bash script/codex/bootstrap.sh internet   # 可上网区
+bash script/codex/bootstrap.sh install    # 不可上网区安装/完整恢复
+bash script/codex/bootstrap.sh sync       # 只同步个人配置
+bash script/codex/bootstrap.sh check      # 自检
+```
+
+根目录配置职责：
+
+```text
+AGENTS.md                 全局指令
+mcp/user-servers.json     MCP
+skills/                   独立 Skills
+plugins.lock              Plugins
+marketplaces.lock         Marketplaces
+```
+
+`sync_personal_config.sh` 只更新 AGENTS、skills 和 `config.toml` 中带标记的 MCP 区块，不会覆盖：
+
+```toml
+model_provider = "yundou"
+supports_websockets = false
+```

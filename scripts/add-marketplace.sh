@@ -20,7 +20,7 @@ LOCK_FILE="${REPO}/marketplaces.lock"
 }
 
 if ! command -v codex >/dev/null 2>&1; then
-  echo "错误: 未找到 codex 命令（请先运行 ${REPO}/bootstrap.sh）" >&2
+  echo "错误: 未找到 codex 命令（请先运行 bash ${REPO}/bootstrap.sh install）" >&2
   exit 1
 fi
 

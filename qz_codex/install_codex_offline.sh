@@ -100,15 +100,19 @@ APP_DIR="\$(cd "\$(dirname "\$SCRIPT_PATH")/.." && pwd)"
 ROOT_DIR="\$(cd "\$APP_DIR/../.." && pwd)"
 CLI_JS="\$APP_DIR/offline/codex/package/bin/codex.js"
 RUNTIME_NODE="\$APP_DIR/../node/bin/node"
+PERSONAL_ENV_FILE="\$ROOT_DIR/script/codex/.env"
 ENV_FILE="\$ROOT_DIR/script/codex/qz_codex/codex.api.env"
 export CODEX_HOME="\$APP_DIR/home"
 mkdir -p "\$CODEX_HOME"
-if [[ -f "\$ENV_FILE" ]]; then
-  set -a
-  # shellcheck disable=SC1090
-  source "\$ENV_FILE"
-  set +a
-fi
+# 个人 MCP/Plugin 环境变量先加载；qz API 配置后加载并拥有最高优先级。
+for _env_file in "\$PERSONAL_ENV_FILE" "\$ENV_FILE"; do
+  if [[ -f "\$_env_file" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "\$_env_file"
+    set +a
+  fi
+done
 [[ -n "\${API_KEY:-}" ]] && export OPENAI_API_KEY="\$API_KEY"
 if [[ ! -f "\$CLI_JS" ]]; then
   echo "未找到 \$CLI_JS"

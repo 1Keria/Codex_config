@@ -17,13 +17,13 @@ LOCK_FILE="${REPO}/plugins.lock"
 PLUGIN="$1"
 
 if ! command -v codex >/dev/null 2>&1; then
-  echo "错误: 未找到 codex 命令（请先运行 ${REPO}/bootstrap.sh）" >&2
+  echo "错误: 未找到 codex 命令（请先运行 bash ${REPO}/bootstrap.sh install）" >&2
   exit 1
 fi
 
 if ! codex plugin --help >/dev/null 2>&1; then
   echo "错误: 当前 Codex 不支持 plugin 子命令，请升级到 >= 0.137" >&2
-  echo "  例如: npm install --prefix ~/codex @openai/codex@latest" >&2
+  echo "  请运行: bash ${REPO}/qz_codex/setup_internet_codex.sh" >&2
   exit 1
 fi
 

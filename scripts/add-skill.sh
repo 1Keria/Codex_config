@@ -12,6 +12,8 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SKILLS_DIR="${REPO}/skills"
+ROOT_DIR="$(cd "$REPO/../.." && pwd)"
+CODEX_SKILLS="$ROOT_DIR/apps/codex/home/skills"
 AGENTS_SKILLS="${HOME}/.agents/skills"
 
 usage() {
@@ -33,7 +35,7 @@ if [[ -e "$DEST" ]]; then
   exit 1
 fi
 
-mkdir -p "$SKILLS_DIR" "$AGENTS_SKILLS"
+mkdir -p "$SKILLS_DIR" "$CODEX_SKILLS" "$AGENTS_SKILLS"
 
 if [[ -f "$SOURCE" ]]; then
   mkdir -p "$DEST"
@@ -51,11 +53,13 @@ if [[ ! -f "${DEST}/SKILL.md" ]]; then
   exit 1
 fi
 
+ln -sfn "$DEST" "${CODEX_SKILLS}/${NAME}"
 ln -sfn "$DEST" "${AGENTS_SKILLS}/${NAME}"
 
 echo "已添加 skill: ${NAME}"
 echo "  仓库路径: ${DEST}"
-echo "  链接路径: ${AGENTS_SKILLS}/${NAME}"
+echo "  持久链接: ${CODEX_SKILLS}/${NAME}"
+echo "  兼容链接: ${AGENTS_SKILLS}/${NAME}"
 echo ""
 echo "下一步:"
 echo "  cd ${REPO} && git add skills/${NAME} && git commit -m \"add skill: ${NAME}\""

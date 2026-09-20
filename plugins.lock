@@ -8,4 +8,4 @@
 #   vercel@openai-curated
 #
 # 安装后请把实际使用的插件记录在此，便于换机器恢复
-# 也可用：~/codex-setup/scripts/add-plugin.sh github@openai-curated
+# 也可用：script/codex/scripts/add-plugin.sh github@openai-curated

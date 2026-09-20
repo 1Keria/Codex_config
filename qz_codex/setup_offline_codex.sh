@@ -54,3 +54,8 @@ PY
 
 # 环境文件更新和连通性验证后再安装，确保 config.toml 使用当前有效映射地址。
 bash "$CODEX_DIR/install_codex_offline.sh" >/dev/null
+
+# 合并仓库根目录的 AGENTS、MCP、skills、plugins；不会覆盖 yundou Provider。
+if [[ -x "$CODEX_DIR/sync_personal_config.sh" ]]; then
+  bash "$CODEX_DIR/sync_personal_config.sh"
+fi

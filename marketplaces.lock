@@ -9,4 +9,4 @@
 #   ./local-marketplace-root
 #
 # 官方 curated 商店 openai-curated 通常已内置，无需添加
-# 也可用：~/codex-setup/scripts/add-marketplace.sh owner/repo
+# 也可用：script/codex/scripts/add-marketplace.sh owner/repo
