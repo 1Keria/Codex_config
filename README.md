@@ -11,6 +11,8 @@
 bash script/codex/bootstrap.sh <命令>
 ```
 
+面向使用者的完整操作手册：[`USAGE.md`](USAGE.md)。
+
 ## 快速使用
 
 ### qz 平台：可上网区
